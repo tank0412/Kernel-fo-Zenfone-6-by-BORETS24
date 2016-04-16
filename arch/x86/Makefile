@@ -33,7 +33,7 @@ ifeq ($(CONFIG_X86_32),y)
 
         # Never want PIC in a 32-bit kernel, prevent breakage with GCC built
         # with nonstandard options
-        KBUILD_CFLAGS += -fno-pic -O3
+        KBUILD_CFLAGS += -fno-pic
 
         # prevent gcc from keeping the stack 16 byte aligned
         KBUILD_CFLAGS += $(call cc-option,-mpreferred-stack-boundary=2)
@@ -66,10 +66,10 @@ else
 
         cflags-$(CONFIG_MCORE2) += \
                 $(call cc-option,-march=core2,$(call cc-option,-mtune=generic))
-	cflags-$(CONFIG_MATOM) += $(call cc-option,-march=bonnell) \
-                $(call cc-option,-mtune=intel,$(call cc-option,-mtune=intel))
-        cflags-$(CONFIG_MSLM) += $(call cc-option,-march=silvermont) \
- 	$(call cc-option,-mtune=silvermont,$(call cc-option,-mtune=silvermont))
+	cflags-$(CONFIG_MATOM) += $(call cc-option,-march=atom) \
+		$(call cc-option,-mtune=atom,$(call cc-option,-mtune=generic))
+        cflags-$(CONFIG_MSLM) += $(call cc-option,-march=slm) \
+                $(call cc-option,-mtune=slm,$(call cc-option,-mtune=generic))
         cflags-$(CONFIG_GENERIC_CPU) += $(call cc-option,-mtune=generic)
         KBUILD_CFLAGS += $(cflags-y)
 

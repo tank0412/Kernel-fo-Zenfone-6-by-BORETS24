@@ -31,6 +31,7 @@
 #include <linux/kthread.h>
 #include <linux/slab.h>
 #include <linux/kernel_stat.h>
+#include <linux/earlysuspend.h>
 #include <asm/cputime.h>
 
 #define CREATE_TRACE_POINTS
@@ -161,6 +162,7 @@ static inline u64 irq_time_read(int cpu)
 	return irq_time;
 }
 #endif /* CONFIG_IRQ_TIME_ACCOUNTING */
+
 
 static inline cputime64_t get_cpu_idle_time_jiffy(unsigned int cpu,
 						  cputime64_t *wall)
@@ -923,7 +925,7 @@ static ssize_t show_target_loads(
 		ret += sprintf(buf + ret, "%u%s", tunables->target_loads[i],
 			       i & 0x1 ? ":" : " ");
 
-	sprintf(buf + ret - 1, "\n");
+	ret += sprintf(buf + --ret, "\n");
 	spin_unlock_irqrestore(&tunables->target_loads_lock, flags);
 	return ret;
 }
@@ -963,7 +965,7 @@ static ssize_t show_above_hispeed_delay(
 			       tunables->above_hispeed_delay[i],
 			       i & 0x1 ? ":" : " ");
 
-	sprintf(buf + ret - 1, "\n");
+	ret += sprintf(buf + --ret, "\n");
 	spin_unlock_irqrestore(&tunables->above_hispeed_delay_lock, flags);
 	return ret;
 }
@@ -1122,12 +1124,13 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
 		return ret;
 
 	tunables->boost_val = val;
-    if (tunables->boost_val == 2) {
-        tunables->boostpulse_endtime = ktime_to_us(ktime_get()) + 5000000;
-        trace_cpufreq_interactive_boost("pulse");
-        cpufreq_interactive_boost();
-        tunables->boost_val = 0;
-    } else if (tunables->boost_val) {
+
+	if (tunables->boost_val == 2) {
+		tunables->boostpulse_endtime = ktime_to_us(ktime_get()) + 5000000;
+                trace_cpufreq_interactive_boost("pulse");
+                cpufreq_interactive_boost();
+                tunables->boost_val = 0;
+	} else if (tunables->boost_val) {
 		trace_cpufreq_interactive_boost("on");
 		cpufreq_interactive_boost();
 	} else {
@@ -1137,25 +1140,30 @@ static ssize_t store_boost(struct cpufreq_interactive_tunables *tunables,
 	return count;
 }
 
-void set_cpufreq_boost(unsigned long val){
-    struct cpufreq_interactive_cpuinfo *pcpu =        &per_cpu(cpuinfo, smp_processor_id());
-    struct cpufreq_interactive_tunables *tunables =       pcpu->policy->governor_data;
-    tunables->boost_val = val;
-    if (tunables->boost_val == 2) {
-        tunables->boostpulse_endtime = ktime_to_us(ktime_get()) + 5000000;
-        trace_cpufreq_interactive_boost("pulse");
-        cpufreq_interactive_boost();
-        tunables->boost_val = 0;
-    } else if (tunables->boost_val) {
-        trace_cpufreq_interactive_boost("on");
-        cpufreq_interactive_boost();
-    } else {
-        trace_cpufreq_interactive_unboost("off");
-    }
-    return;
+void set_cpufreq_boost(unsigned long val)
+{
+        struct cpufreq_interactive_cpuinfo *pcpu =
+		&per_cpu(cpuinfo, raw_smp_processor_id());
+
+        struct cpufreq_interactive_tunables *tunables =
+		pcpu->policy->governor_data;
+
+        tunables->boost_val = val;
+        if (tunables->boost_val == 2) {
+                tunables->boostpulse_endtime = ktime_to_us(ktime_get()) + 5000000;
+                trace_cpufreq_interactive_boost("pulse");
+                cpufreq_interactive_boost();
+                tunables->boost_val = 0;
+        } else if (tunables->boost_val) {
+                trace_cpufreq_interactive_boost("on");
+                cpufreq_interactive_boost();
+        } else {
+                trace_cpufreq_interactive_unboost("off");
+        }
+
+	return;
 }
 EXPORT_SYMBOL_GPL(set_cpufreq_boost);
-
 static ssize_t store_boostpulse(struct cpufreq_interactive_tunables *tunables,
 				const char *buf, size_t count)
 {
@@ -1550,7 +1558,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 		tunables->io_busy = 0;
 #endif /* CONFIG_IRQ_TIME_ACCOUNTING */
 		if (boot_boost)
-		//	tunables->boost_val = 1;
+			//tunables->boost_val = 1;
 
 		spin_lock_init(&tunables->target_loads_lock);
 		spin_lock_init(&tunables->above_hispeed_delay_lock);
@@ -1592,7 +1600,7 @@ static int cpufreq_governor_interactive(struct cpufreq_policy *policy,
 			tunables->hispeed_freq = policy->max;
 
 		if (!tunables->touchboost_freq)
-			tunables->touchboost_freq = policy->max;
+			tunables->touchboost_freq = 933000;
 		for_each_cpu(j, policy->cpus) {
 			pcpu = &per_cpu(cpuinfo, j);
 			pcpu->policy = policy;

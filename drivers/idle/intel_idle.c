@@ -123,6 +123,8 @@ static const struct idle_cpu *icpu;
 static struct cpuidle_device __percpu *intel_idle_cpuidle_devices;
 static int intel_idle(struct cpuidle_device *dev,
 			struct cpuidle_driver *drv, int index);
+static void intel_idle_freeze(struct cpuidle_device *dev,
+			      struct cpuidle_driver *drv, int index);
 static int intel_idle_cpu_init(int cpu);
 
 static struct cpuidle_state *cpuidle_state_table;
@@ -157,28 +159,32 @@ static struct cpuidle_state nehalem_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 3,
 		.target_residency = 6,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C1E-NHM",
 		.desc = "MWAIT 0x01",
 		.flags = MWAIT2flg(0x01) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 10,
 		.target_residency = 20,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C3-NHM",
 		.desc = "MWAIT 0x10",
 		.flags = MWAIT2flg(0x10) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 20,
 		.target_residency = 80,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C6-NHM",
 		.desc = "MWAIT 0x20",
 		.flags = MWAIT2flg(0x20) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 200,
 		.target_residency = 800,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -190,35 +196,40 @@ static struct cpuidle_state snb_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 2,
 		.target_residency = 2,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C1E-SNB",
 		.desc = "MWAIT 0x01",
 		.flags = MWAIT2flg(0x01) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 10,
 		.target_residency = 20,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C3-SNB",
 		.desc = "MWAIT 0x10",
 		.flags = MWAIT2flg(0x10) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 80,
 		.target_residency = 211,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C6-SNB",
 		.desc = "MWAIT 0x20",
 		.flags = MWAIT2flg(0x20) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 104,
 		.target_residency = 345,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C7-SNB",
 		.desc = "MWAIT 0x30",
 		.flags = MWAIT2flg(0x30) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 109,
 		.target_residency = 345,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -230,35 +241,40 @@ static struct cpuidle_state ivb_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 1,
 		.target_residency = 1,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C1E-IVB",
 		.desc = "MWAIT 0x01",
 		.flags = MWAIT2flg(0x01) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 10,
 		.target_residency = 20,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C3-IVB",
 		.desc = "MWAIT 0x10",
 		.flags = MWAIT2flg(0x10) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 59,
 		.target_residency = 156,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C6-IVB",
 		.desc = "MWAIT 0x20",
 		.flags = MWAIT2flg(0x20) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 80,
 		.target_residency = 300,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C7-IVB",
 		.desc = "MWAIT 0x30",
 		.flags = MWAIT2flg(0x30) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 87,
 		.target_residency = 300,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -270,56 +286,64 @@ static struct cpuidle_state hsw_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 2,
 		.target_residency = 2,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C1E-HSW",
 		.desc = "MWAIT 0x01",
 		.flags = MWAIT2flg(0x01) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 10,
 		.target_residency = 20,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C3-HSW",
 		.desc = "MWAIT 0x10",
 		.flags = MWAIT2flg(0x10) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 33,
 		.target_residency = 100,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C6-HSW",
 		.desc = "MWAIT 0x20",
 		.flags = MWAIT2flg(0x20) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 133,
 		.target_residency = 400,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C7s-HSW",
 		.desc = "MWAIT 0x32",
 		.flags = MWAIT2flg(0x32) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 166,
 		.target_residency = 500,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C8-HSW",
 		.desc = "MWAIT 0x40",
 		.flags = MWAIT2flg(0x40) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 300,
 		.target_residency = 900,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C9-HSW",
 		.desc = "MWAIT 0x50",
 		.flags = MWAIT2flg(0x50) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 600,
 		.target_residency = 1800,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C10-HSW",
 		.desc = "MWAIT 0x60",
 		.flags = MWAIT2flg(0x60) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 2600,
 		.target_residency = 7700,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -331,28 +355,32 @@ static struct cpuidle_state atom_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 10,
 		.target_residency = 20,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C2-ATM",
 		.desc = "MWAIT 0x10",
 		.flags = MWAIT2flg(0x10) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 20,
 		.target_residency = 80,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C4-ATM",
 		.desc = "MWAIT 0x30",
 		.flags = MWAIT2flg(0x30) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 100,
 		.target_residency = 400,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.name = "C6-ATM",
 		.desc = "MWAIT 0x52",
 		.flags = MWAIT2flg(0x52) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 140,
 		.target_residency = 560,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -364,35 +392,40 @@ static struct cpuidle_state vlv_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 1,
 		.target_residency = 4,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C4 */
 		.name = "C4-ATM",
 		.desc = "MWAIT 0x30",
 		.flags = MWAIT2flg(0x30) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 100,
 		.target_residency = 400,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C6 */
 		.name = "C6-ATM",
 		.desc = "MWAIT 0x52",
 		.flags = MWAIT2flg(0x52) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 140,
 		.target_residency = 560,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C7-S0i1 */
 		.name = "S0i1-ATM",
 		.desc = "MWAIT 0x60",
 		.flags = MWAIT2flg(0x60) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 1200,
 		.target_residency = 4000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C9-S0i3 */
 		.name = "S0i3-ATM",
 		.desc = "MWAIT 0x64",
 		.flags = MWAIT2flg(0x64) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 10000,
 		.target_residency = 20000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -404,7 +437,8 @@ static struct cpuidle_state chv_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 1,
 		.target_residency = 4,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C4 */
 		.name = "C4-ATM",
 		.desc = "MWAIT 0x30",
@@ -412,7 +446,8 @@ static struct cpuidle_state chv_cstates[CPUIDLE_STATE_MAX] = {
 						| CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 100,
 		.target_residency = 400,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C6 */
 		.name = "C6-ATM",
 		.desc = "MWAIT 0x52",
@@ -420,7 +455,8 @@ static struct cpuidle_state chv_cstates[CPUIDLE_STATE_MAX] = {
 						| CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 140,
 		.target_residency = 560,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C7-S0i1 */
 		.name = "S0i1-ATM",
 		.desc = "MWAIT 0x60",
@@ -428,7 +464,8 @@ static struct cpuidle_state chv_cstates[CPUIDLE_STATE_MAX] = {
 						| CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 1200,
 		.target_residency = 4000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C8-S0i2 */
 		.name = "S0i2-ATM",
 		.desc = "MWAIT 0x62",
@@ -436,7 +473,8 @@ static struct cpuidle_state chv_cstates[CPUIDLE_STATE_MAX] = {
 						| CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 2000,
 		.target_residency = 8000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C9-S0i3 */
 		.name = "S0i3-ATM",
 		.desc = "MWAIT 0x64",
@@ -444,7 +482,8 @@ static struct cpuidle_state chv_cstates[CPUIDLE_STATE_MAX] = {
 						| CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 10000,
 		.target_residency = 20000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -457,35 +496,40 @@ static struct cpuidle_state mrfld_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 1,
 		.target_residency = 4,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C4 */
 		.name = "C4-ATM",
 		.desc = "MWAIT 0x30",
 		.flags = MWAIT2flg(0x30) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 100,
 		.target_residency = 400,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C6 */
 		.name = "C6-ATM",
 		.desc = "MWAIT 0x52",
 		.flags = MWAIT2flg(0x52) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 140,
 		.target_residency = 560,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C7-S0i1 */
 		.name = "S0i1-ATM",
 		.desc = "MWAIT 0x60",
 		.flags = MWAIT2flg(0x60) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 1200,
 		.target_residency = 4000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C9-S0i3 */
 		.name = "S0i3-ATM",
 		.desc = "MWAIT 0x64",
 		.flags = MWAIT2flg(0x64) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 10000,
 		.target_residency = 20000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -500,7 +544,8 @@ static struct cpuidle_state moorfld_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = 1,
 		.target_residency = 4,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C6 */
 		.name = "C6-ATM",
 		.desc = "MWAIT 0x52",
@@ -508,7 +553,8 @@ static struct cpuidle_state moorfld_cstates[CPUIDLE_STATE_MAX] = {
 					 | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 140,
 		.target_residency = 560,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C7-S0i1 */
 		.name = "S0i1-ATM",
 		.desc = "MWAIT 0x60",
@@ -516,7 +562,8 @@ static struct cpuidle_state moorfld_cstates[CPUIDLE_STATE_MAX] = {
 					 | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 1200,
 		.target_residency = 4000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C9-S0i3 */
 		.name = "S0i3-ATM",
 		.desc = "MWAIT 0x64",
@@ -524,7 +571,8 @@ static struct cpuidle_state moorfld_cstates[CPUIDLE_STATE_MAX] = {
 					 | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = 10000,
 		.target_residency = 20000,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{
 		.enter = NULL }
 };
@@ -539,21 +587,24 @@ static struct cpuidle_state mfld_cstates[CPUIDLE_STATE_MAX] = {
 		.flags = MWAIT2flg(0x00) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = CSTATE_EXIT_LATENCY_C1,
 		.target_residency = 4,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C2 */
 		.name = "ATM-C2",
 		.desc = "MWAIT 0x10",
 		.flags = MWAIT2flg(0x10) | CPUIDLE_FLAG_TIME_VALID,
 		.exit_latency = CSTATE_EXIT_LATENCY_C2,
 		.target_residency = 80,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C4 */
 		.name = "ATM-C4",
 		.desc = "MWAIT 0x30",
 		.flags = MWAIT2flg(0x30) | CPUIDLE_FLAG_TIME_VALID | CPUIDLE_FLAG_TLB_FLUSHED,
 		.exit_latency = CSTATE_EXIT_LATENCY_C4,
 		.target_residency = 400,
-		.enter = &intel_idle },
+		.enter = &intel_idle,
+		.enter_freeze = intel_idle_freeze, },
 	{ /* MWAIT C6 */
 		.name = "ATM-C6",
 		.desc = "MWAIT 0x52",
@@ -866,6 +917,20 @@ static int intel_idle(struct cpuidle_device *dev,
 		clockevents_notify(CLOCK_EVT_NOTIFY_BROADCAST_EXIT, &cpu);
 
 	return index;
+}
+/**
+ * intel_idle_freeze - simplified "enter" callback routine for suspend-to-idle
+ * @dev: cpuidle_device
+ * @drv: cpuidle driver
+ * @index: state index
+ */
+static void intel_idle_freeze(struct cpuidle_device *dev,
+			     struct cpuidle_driver *drv, int index)
+{
+	unsigned long ecx = 1; /* break on interrupt flag */
+	unsigned long eax = flg2MWAIT(drv->states[index].flags);
+
+	__mwait(eax, ecx);
 }
 
 static void __setup_broadcast_timer(void *arg)
